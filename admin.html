@@ -37,16 +37,17 @@
 </div>
 
 <script>
-    const SCRIPT_URL = https://script.google.com/macros/s/AKfycbxzvNZEmnGoJFWSHnKILHaA6HlPRfNfoDBlWRDmEtlOv3M7SAQeISzUsdxV-1dpwe3r7A/exec;
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzvNZEmnGoJFWSHnKILHaA6HlPRfNfoDBlWRDmEtlOv3M7SAQeISzUsdxV-1dpwe3r7A/exec';
 
     async function loadData() {
         try {
-            const res = await fetch(SCRIPT_URL);
+            const res = await fetch(SCRIPT_URL, { redirect: "follow" });
             const data = await res.json();
             document.getElementById('admin-cash').textContent = parseFloat(data.caja).toFixed(2);
             renderTable(data.inventario);
         } catch (e) {
-            document.getElementById('admin-tbody').innerHTML = '<tr><td colspan="4">Error de conexión.</td></tr>';
+            console.error(e);
+            document.getElementById('admin-tbody').innerHTML = '<tr><td colspan="4">Error de conexión. Revisa consola o permisos.</td></tr>';
         }
     }
 
@@ -80,6 +81,7 @@
         try {
             await fetch(SCRIPT_URL, {
                 method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'addStock', id: id, qty: qty })
             });
             await loadData();
