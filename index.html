@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advance Studio - Punto de Venta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #f4f4f5; --surface: #ffffff; --text: #18181b; --muted: #71717a; --accent: #09090b; --border: #e4e4e7; --success: #10b981; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 16px; }
+        .container { max-width: 600px; margin: 0 auto; background: var(--surface); border-radius: 16px; padding: 20px; border: 1px solid var(--border); }
+        h2 { margin-bottom: 20px; text-align: center; }
+        .pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .product-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; }
+        .product-card:active { transform: scale(0.95); }
+        .product-card .name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .product-card .price { color: var(--success); font-weight: 600; }
+        .product-card .stock { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .out-of-stock { opacity: 0.5; pointer-events: none; }
+        .cart-section { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .cart-total { font-size: 18px; font-weight: 600; margin: 16px 0; text-align: right; }
+        button.btn-primary { background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; }
+        button.btn-primary:disabled { opacity: 0.7; cursor: wait; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📱 Punto de Venta</h2>
+    <div class="pos-grid" id="pos-grid">Cargando inventario...</div>
+    <div class="cart-section">
+        <div id="cart-items"></div>
+        <div class="cart-total">Total: $<span id="cart-total-amount">0.00</span></div>
+        <button id="btn-cobrar" class="btn-primary" onclick="procesarVenta()">Cobrar Ingreso</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = https://script.google.com/macros/s/AKfycbxzvNZEmnGoJFWSHnKILHaA6HlPRfNfoDBlWRDmEtlOv3M7SAQeISzUsdxV-1dpwe3r7A/exec;
+    let inventory = [];
+    let currentCart = {};
+
+    async function loadData() {
+        try {
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            inventory = data.inventario;
+            renderApp();
+        } catch (e) {
+            document.getElementById('pos-grid').innerHTML = 'Error de conexión.';
+        }
+    }
+
+    function renderApp() {
+        const grid = document.getElementById('pos-grid');
+        grid.innerHTML = '';
+        inventory.forEach(item => {
+            const currentStock = item.stock - (currentCart[item.id] ? currentCart[item.id].qty : 0);
+            const card = document.createElement('div');
+            card.className = `product-card ${currentStock <= 0 ? 'out-of-stock' : ''}`;
+            card.onclick = () => addToCart(item.id);
+            card.innerHTML = `<div class="name">${item.name}</div><div class="price">$${item.price}</div><div class="stock">Disp: ${currentStock}</div>`;
+            grid.appendChild(card);
+        });
+        renderCart();
+    }
+
+    function addToCart(id) {
+        const item = inventory.find(i => i.id === id);
+        if (!item) return;
+        const currentQty = currentCart[id] ? currentCart[id].qty : 0;
+        if (currentQty >= item.stock) return;
+        if (currentCart[id]) currentCart[id].qty += 1;
+        else currentCart[id] = { ...item, qty: 1 };
+        renderApp();
+    }
+
+    function renderCart() {
+        const cartDiv = document.getElementById('cart-items');
+        cartDiv.innerHTML = '';
+        let total = 0;
+        Object.values(currentCart).forEach(item => {
+            const itemTotal = item.qty * item.price;
+            total += itemTotal;
+            cartDiv.innerHTML += `<div class="cart-item"><span>${item.qty}x ${item.name}</span><span>$${itemTotal}</span></div>`;
+        });
+        document.getElementById('cart-total-amount').textContent = total.toFixed(2);
+    }
+
+    async function procesarVenta() {
+        const items = Object.values(currentCart);
+        if (items.length === 0) return;
+        
+        const btn = document.getElementById('btn-cobrar');
+        btn.textContent = 'Procesando...';
+        btn.disabled = true;
+
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'sale', items: items })
+            });
+            currentCart = {};
+            await loadData();
+        } catch (e) {
+            alert('Error al registrar venta');
+        }
+        
+        btn.textContent = 'Cobrar Ingreso';
+        btn.disabled = false;
+    }
+
+    loadData();
+</script>
+</body>
+</html>
