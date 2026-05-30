@@ -38,18 +38,19 @@
 </div>
 
 <script>
-    const SCRIPT_URL = https://script.google.com/macros/s/AKfycbxzvNZEmnGoJFWSHnKILHaA6HlPRfNfoDBlWRDmEtlOv3M7SAQeISzUsdxV-1dpwe3r7A/exec;
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzvNZEmnGoJFWSHnKILHaA6HlPRfNfoDBlWRDmEtlOv3M7SAQeISzUsdxV-1dpwe3r7A/exec';
     let inventory = [];
     let currentCart = {};
 
     async function loadData() {
         try {
-            const res = await fetch(SCRIPT_URL);
+            const res = await fetch(SCRIPT_URL, { redirect: "follow" });
             const data = await res.json();
             inventory = data.inventario;
             renderApp();
         } catch (e) {
-            document.getElementById('pos-grid').innerHTML = 'Error de conexión.';
+            console.error(e);
+            document.getElementById('pos-grid').innerHTML = 'Error de conexión. Revisa la consola o los permisos de Apps Script.';
         }
     }
 
@@ -100,6 +101,7 @@
         try {
             await fetch(SCRIPT_URL, {
                 method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'sale', items: items })
             });
             currentCart = {};
